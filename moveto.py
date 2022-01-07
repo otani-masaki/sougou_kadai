@@ -12,6 +12,26 @@ DRONE_IP = os.environ.get("DRONE_IP", "10.202.0.1")
 drone = olympe.Drone(DRONE_IP)
 
 
+def main():
+    listener = Listener(on_press=on_press)
+    listener.start()
+
+    drone.connect()
+
+    takeOffDeff()
+
+    # Get the home position 
+    drone_location = drone.get_state(GpsLocationChanged)
+
+    moveByFlont10()
+
+    moveToBackHome(drone_location)
+
+    landingDeff()
+
+    drone.disconnect()
+
+
 def on_press(key):
     if key == KeyCode.from_char('e'):
         print('EMERGENCY cutoff triggered')
@@ -24,13 +44,7 @@ def on_press(key):
     drone.disconnect()
         
 
-listener = Listener(on_press=on_press)
-listener.start()
-
-
-def main():
-    drone.connect()
-
+def takeOffDeff():
     # Take-off
     drone(
         FlyingStateChanged(state="hovering", _policy="check")
@@ -46,18 +60,16 @@ def main():
     ).wait()
 
 
-    # Get the home position 
-    drone_location = drone.get_state(GpsLocationChanged)
-
+def moveByFlont10():
     # Move 10m
     drone(
         moveBy(10, 0, 0, math.pi)
-        >> PCMD(1, 0, 0, 0, 0, 0)
+        #>> PCMD(1, 0, 0, 0, 0, 0)
         >> FlyingStateChanged(state="hovering", _timeout=5)
     ).wait().success()
 
 
-
+def moveToBackHome(drone_location):
     # Go back home
     drone(
         moveTo(drone_location["latitude"],  drone_location["longitude"], drone_location["altitude"], MoveTo_Orientation_mode.TO_TARGET, 0.0)
@@ -66,13 +78,14 @@ def main():
         >> FlyingStateChanged(state="hovering", _timeout=5)
     ).wait()
 
+
+def landingDeff():
     # Landing
     drone(
         Landing()
         >> FlyingStateChanged(state="landed", _timeout=5)
     ).wait()
 
-    drone.disconnect()
-
+    
 if __name__ == "__main__":
     main()
