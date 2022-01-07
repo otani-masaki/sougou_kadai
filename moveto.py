@@ -9,7 +9,7 @@ from olympe.enums.ardrone3.Piloting import MoveTo_Orientation_mode
 from pynput.keyboard import Listener, KeyCode
 
 DRONE_IP = os.environ.get("DRONE_IP", "10.202.0.1")
-
+drone = olympe.Drone(DRONE_IP)
 
 
 def on_press(key):
@@ -28,48 +28,51 @@ listener = Listener(on_press=on_press)
 listener.start()
 
 
-drone = olympe.Drone(DRONE_IP)
-drone.connect()
+def main():
+    drone.connect()
 
-# Take-off
-drone(
-    FlyingStateChanged(state="hovering", _policy="check")
-    | FlyingStateChanged(state="flying", _policy="check")
-    | (
-        GPSFixStateChanged(fixed=1, _timeout=10, _policy="check_wait")
-        >> (
-            TakeOff(_no_expect=True)
-            & FlyingStateChanged(
-                state="hovering", _timeout=10, _policy="check_wait")
+    # Take-off
+    drone(
+        FlyingStateChanged(state="hovering", _policy="check")
+        | FlyingStateChanged(state="flying", _policy="check")
+        | (
+            GPSFixStateChanged(fixed=1, _timeout=10, _policy="check_wait")
+            >> (
+                TakeOff(_no_expect=True)
+                & FlyingStateChanged(
+                    state="hovering", _timeout=10, _policy="check_wait")
+            )
         )
-    )
-).wait()
+    ).wait()
 
 
-# Get the home position 
-drone_location = drone.get_state(GpsLocationChanged)
+    # Get the home position 
+    drone_location = drone.get_state(GpsLocationChanged)
 
-# Move 10m
-drone(
-    moveBy(10, 0, 0, math.pi)
-    >> PCMD(1, 0, 0, 0, 0, 0)
-    >> FlyingStateChanged(state="hovering", _timeout=5)
-).wait().success()
+    # Move 10m
+    drone(
+        moveBy(10, 0, 0, math.pi)
+        >> PCMD(1, 0, 0, 0, 0, 0)
+        >> FlyingStateChanged(state="hovering", _timeout=5)
+    ).wait().success()
 
 
 
-# Go back home
-drone(
-    moveTo(drone_location["latitude"],  drone_location["longitude"], drone_location["altitude"], MoveTo_Orientation_mode.TO_TARGET, 0.0)
-    >> FlyingStateChanged(state="hovering", _timeout=5)
-    >> moveToChanged(latitude=drone_location["latitude"], longitude=drone_location["longitude"], altitude=drone_location["altitude"], orientation_mode=MoveTo_Orientation_mode.TO_TARGET, status='DONE', _policy='wait')
-    >> FlyingStateChanged(state="hovering", _timeout=5)
-).wait()
+    # Go back home
+    drone(
+        moveTo(drone_location["latitude"],  drone_location["longitude"], drone_location["altitude"], MoveTo_Orientation_mode.TO_TARGET, 0.0)
+        >> FlyingStateChanged(state="hovering", _timeout=5)
+        >> moveToChanged(latitude=drone_location["latitude"], longitude=drone_location["longitude"], altitude=drone_location["altitude"], orientation_mode=MoveTo_Orientation_mode.TO_TARGET, status='DONE', _policy='wait')
+        >> FlyingStateChanged(state="hovering", _timeout=5)
+    ).wait()
 
-# Landing
-drone(
-    Landing()
-    >> FlyingStateChanged(state="landed", _timeout=5)
-).wait()
+    # Landing
+    drone(
+        Landing()
+        >> FlyingStateChanged(state="landed", _timeout=5)
+    ).wait()
 
-drone.disconnect()
+    drone.disconnect()
+
+if __name__ == "__main__":
+    main()
