@@ -11,7 +11,8 @@ from olympe.messages.move import extended_move_by, extended_move_to
 from olympe.messages.ardrone3.PilotingEvent import moveByEnd
 
 
-DRONE_IP = os.environ.get("DRONE_IP", "10.202.0.1")
+# DRONE_IP = os.environ.get("DRONE_IP", "10.202.0.1")
+DRONE_IP = os.environ.get("DRONE_IP", "192.168.42.1")
 drone = olympe.Drone(DRONE_IP)
 
 
@@ -69,9 +70,9 @@ def moveByFlont10():
         # moveBy(10, 0, 0, math.pi)
         #>> PCMD(1, 0, 0, 0, 0, 0)
         # >> FlyingStateChanged(state="hovering", _timeout=5)
-        extended_move_by(50, 0, 0, math.pi, 0.5, 0.5, 0.5, _timeout=100)
-        >> FlyingStateChanged(state="hovering", _timeout=5)
-        >> moveByEnd(_policy='wait')
+        extended_move_by(10, 0, 0, math.pi, 1, 1, 1, _timeout=100)
+        # >> FlyingStateChanged(state="hovering", _timeout=5)
+        # >> moveByEnd(_policy='wait')
         >> FlyingStateChanged(state="hovering", _timeout=5)
     ).wait().success()
 
@@ -80,7 +81,7 @@ def moveToBackHome(drone_location):
     # Go back home
     drone(
         extended_move_to(drone_location["latitude"],  drone_location["longitude"],\
-         drone_location["altitude"], MoveTo_Orientation_mode.TO_TARGET, 0.0, 5, 1, 1)
+         drone_location["altitude"], MoveTo_Orientation_mode.TO_TARGET, 0.0, 0.1, 0.1, 1)
         >> FlyingStateChanged(state="hovering", _timeout=5)
         >> moveToChanged(latitude=drone_location["latitude"], longitude=drone_location["longitude"],\
          altitude=drone_location["altitude"], orientation_mode=MoveTo_Orientation_mode.TO_TARGET,\
