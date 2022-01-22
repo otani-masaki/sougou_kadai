@@ -1,27 +1,30 @@
+"""
+takeoff 
+-> 10meters forward 
+-> return to takeoff point 
+-> landing
+"""
 import math
-from moveto import takeOffDeff
 import olympe
 import os
-from olympe.messages.ardrone3.Piloting import TakeOff, moveBy, Landing, moveTo, Circle, Emergency
+from olympe.messages.ardrone3.Piloting import TakeOff, moveBy, Landing, moveTo, Circle, PCMD, Emergency
 from olympe.messages.ardrone3.PilotingState import moveToChanged, FlyingStateChanged, PositionChanged, AttitudeChanged
 from olympe.messages.ardrone3.GPSSettingsState import GPSFixStateChanged
 from olympe.messages.ardrone3.PilotingState import GpsLocationChanged
 from olympe.enums.ardrone3.Piloting import MoveTo_Orientation_mode
-from olympe.messages.move import extended_move_by, extended_move_to
 from pynput.keyboard import Listener, KeyCode
+from olympe.messages.move import extended_move_by, extended_move_to
+from olympe.messages.ardrone3.PilotingEvent import moveByEnd
+
 
 DRONE_IP = os.environ.get("DRONE_IP", "10.202.0.1")
 # DRONE_IP = os.environ.get("DRONE_IP", "192.168.42.1")
+# DRONE_IP = os.environ.get("DRONE_IP", "192.168.53.1")
 drone = olympe.Drone(DRONE_IP)
 
 
-coordinates1 = (34,4253, 135.4269)
-coordinates2 = (34.4255, 135.4268)
-coordinates3 = (34.4253, 135.4265)
-coordinates4 = (34.4252, 135.4265)
-
 def main():
-    listener = Listener(on_press=on_press) #anafi
+    listener = Listener(on_press=on_press)
     listener.start()
 
     drone.connect()
@@ -30,14 +33,34 @@ def main():
 
     # Get the home position 
     drone_location = drone.get_state(GpsLocationChanged)
+    print("==========================================================")
+    print(drone_location)
+    print("============================================================")
+    culc1=drone_location["latitude"]*10000000000
+    culc1=math.floor(culc1)
+    print(culc1)
+    culc1=culc1/10000000000
+    print(culc1)
 
-    moveByFlont10(drone_location)
+    culc2=drone_location["longitude"]*10000000000
+    culc2=math.floor(culc2)
+    print(culc2)
+    culc2=culc2/10000000000
+    print(culc2)
 
-    moveToBackHome(drone_location)
+    moveByFlont10(10)
+
+    drone_location = drone.get_state(GpsLocationChanged)
+    print("==========================================================")
+    print(drone_location)
+    print("============================================================")
+
+    moveToBackHome(drone_location, culc1, culc2)
 
     landingDeff()
 
     drone.disconnect()
+
 
 def on_press(key):
     if key == KeyCode.from_char('e'):
@@ -45,11 +68,12 @@ def on_press(key):
         drone(Emergency())
 
     if key == KeyCode.from_char('l'):
-        print('Landing triggered')
+        print('Landing')
         drone(Landing())
 
     drone.disconnect()
         
+
 def takeOffDeff():
     # Take-off
     drone(
@@ -65,28 +89,23 @@ def takeOffDeff():
         )
     ).wait()
 
-def moveByFlont10(coordinates1):
+
+def moveByFlont10(dx):
+    # Move 10m
+    drone(
+        extended_move_by(dx, 0, 0, math.pi, 0.1, 0.1, 1, _timeout=100)
+        >> FlyingStateChanged(state="hovering", _timeout=5)
+    ).wait().success()
+
+
+def moveToBackHome(drone_location, culc1, culc2):
     # Go back home
     drone(
-        extended_move_to(34.4253,  135.4269,\
-         1, MoveTo_Orientation_mode.TO_TARGET, 0.0, 1, 1, 1)
+        extended_move_to(culc1,  culc2,\
+         1, MoveTo_Orientation_mode.TO_TARGET, 0.0, 10, 10, 10)
         >> FlyingStateChanged(state="hovering", _timeout=5)
-        >> moveToChanged(34,4253,\
-         135.4269,\
+        >> moveToChanged(latitude=culc1, longitude=culc2,\
          altitude=1, orientation_mode=MoveTo_Orientation_mode.TO_TARGET,\
-         status='DONE', _policy='wait')
-        >> FlyingStateChanged(state="hovering", _timeout=5)
-    ).wait()
-
-
-def moveToBackHome(drone_location):
-    # Go back home
-    drone(
-        extended_move_to(drone_location["latitude"],  drone_location["longitude"],\
-         drone_location["altitude"], MoveTo_Orientation_mode.TO_TARGET, 0.0, 1, 1, 1)
-        >> FlyingStateChanged(state="hovering", _timeout=5)
-        >> moveToChanged(latitude=drone_location["latitude"], longitude=drone_location["longitude"],\
-         altitude=drone_location["altitude"], orientation_mode=MoveTo_Orientation_mode.TO_TARGET,\
          status='DONE', _policy='wait')
         >> FlyingStateChanged(state="hovering", _timeout=5)
     ).wait()
@@ -99,6 +118,7 @@ def landingDeff():
         >> FlyingStateChanged(state="landed", _timeout=5)
     ).wait()
 
-    
+
+
 if __name__ == "__main__":
     main()

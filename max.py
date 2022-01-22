@@ -1,3 +1,9 @@
+"""
+takeoff 
+-> move by specify the coordinates on "move to()" 
+-> return to takeoff point 
+-> landing 
+"""
 import math
 from moveto import takeOffDeff
 import olympe
@@ -11,7 +17,8 @@ from olympe.messages.move import extended_move_by, extended_move_to
 from pynput.keyboard import Listener, KeyCode
 
 # DRONE_IP = os.environ.get("DRONE_IP", "10.202.0.1")
-DRONE_IP = os.environ.get("DRONE_IP", "192.168.42.1")
+# DRONE_IP = os.environ.get("DRONE_IP", "192.168.42.1")
+DRONE_IP = os.environ.get("DRONE_IP", "192.168.53.1")
 drone = olympe.Drone(DRONE_IP)
 
 
@@ -64,11 +71,11 @@ def moveByFlont10(drone_location):
     # Go back home
     drone(
         extended_move_to(drone_location["latitude"],  drone_location["longitude"]-0.0002,\
-         drone_location["altitude"], MoveTo_Orientation_mode.TO_TARGET, 0.0, 1, 1, 1)
+         1, MoveTo_Orientation_mode.TO_TARGET, 0.0, 1, 1, 1)
         >> FlyingStateChanged(state="hovering", _timeout=5)
         >> moveToChanged(latitude=drone_location["latitude"],\
          longitude=drone_location["longitude"]-0.0002,\
-         altitude=drone_location["altitude"], orientation_mode=MoveTo_Orientation_mode.TO_TARGET,\
+         altitude=1, orientation_mode=MoveTo_Orientation_mode.TO_TARGET,\
          status='DONE', _policy='wait')
         >> FlyingStateChanged(state="hovering", _timeout=5)
     ).wait()

@@ -1,3 +1,9 @@
+"""
+takeoff 
+-> 10meters forward 
+-> return to takeoff point 
+-> landing
+"""
 import math
 import olympe
 import os
@@ -11,8 +17,9 @@ from olympe.messages.move import extended_move_by, extended_move_to
 from olympe.messages.ardrone3.PilotingEvent import moveByEnd
 
 
-# DRONE_IP = os.environ.get("DRONE_IP", "10.202.0.1")
-DRONE_IP = os.environ.get("DRONE_IP", "192.168.42.1")
+DRONE_IP = os.environ.get("DRONE_IP", "10.202.0.1")
+# DRONE_IP = os.environ.get("DRONE_IP", "192.168.42.1")
+# DRONE_IP = os.environ.get("DRONE_IP", "192.168.53.1")
 drone = olympe.Drone(DRONE_IP)
 
 
@@ -70,7 +77,7 @@ def moveByFlont10():
         # moveBy(10, 0, 0, math.pi)
         #>> PCMD(1, 0, 0, 0, 0, 0)
         # >> FlyingStateChanged(state="hovering", _timeout=5)
-        extended_move_by(10, 0, 0, math.pi, 1, 1, 1, _timeout=100)
+        extended_move_by(10, 0, 0, math.pi, 0.1, 0.1, 1, _timeout=100)
         # >> FlyingStateChanged(state="hovering", _timeout=5)
         # >> moveByEnd(_policy='wait')
         >> FlyingStateChanged(state="hovering", _timeout=5)
@@ -81,10 +88,10 @@ def moveToBackHome(drone_location):
     # Go back home
     drone(
         extended_move_to(drone_location["latitude"],  drone_location["longitude"],\
-         drone_location["altitude"], MoveTo_Orientation_mode.TO_TARGET, 0.0, 0.1, 0.1, 1)
+         1, MoveTo_Orientation_mode.TO_TARGET, 0.0, 10, 10, 10)
         >> FlyingStateChanged(state="hovering", _timeout=5)
         >> moveToChanged(latitude=drone_location["latitude"], longitude=drone_location["longitude"],\
-         altitude=drone_location["altitude"], orientation_mode=MoveTo_Orientation_mode.TO_TARGET,\
+         altitude=1, orientation_mode=MoveTo_Orientation_mode.TO_TARGET,\
          status='DONE', _policy='wait')
         >> FlyingStateChanged(state="hovering", _timeout=5)
     ).wait()
