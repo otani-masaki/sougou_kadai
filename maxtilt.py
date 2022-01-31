@@ -17,9 +17,9 @@ from olympe.messages.move import extended_move_by, extended_move_to
 from olympe.messages.ardrone3.PilotingEvent import moveByEnd
 
 
-DRONE_IP = os.environ.get("DRONE_IP", "10.202.0.1")
+# DRONE_IP = os.environ.get("DRONE_IP", "10.202.0.1")
 # DRONE_IP = os.environ.get("DRONE_IP", "192.168.42.1")
-# DRONE_IP = os.environ.get("DRONE_IP", "192.168.53.1")
+DRONE_IP = os.environ.get("DRONE_IP", "192.168.53.1")
 drone = olympe.Drone(DRONE_IP)
 
 
@@ -33,29 +33,14 @@ def main():
 
     # Get the home position 
     drone_location = drone.get_state(GpsLocationChanged)
-    print("==========================================================")
-    print(drone_location)
-    print("============================================================")
-    culc1=drone_location["latitude"]*10000000000
-    culc1=math.floor(culc1)
-    print(culc1)
-    culc1=culc1/10000000000
-    print(culc1)
 
-    culc2=drone_location["longitude"]*10000000000
-    culc2=math.floor(culc2)
-    print(culc2)
-    culc2=culc2/10000000000
-    print(culc2)
+    moveByFlont10(x=10)
 
-    moveByFlont10(10)
+    moveByFlont10(y=10)
 
-    drone_location = drone.get_state(GpsLocationChanged)
-    print("==========================================================")
-    print(drone_location)
-    print("============================================================")
+    moveByFlont10(y=10)
 
-    moveToBackHome(drone_location, culc1, culc2)
+    moveToBackHome(drone_location)
 
     landingDeff()
 
@@ -76,7 +61,7 @@ def on_press(key):
 
 def takeOffDeff():
     # Take-off
-    drone(
+    assert drone(
         FlyingStateChanged(state="hovering", _policy="check")
         | FlyingStateChanged(state="flying", _policy="check")
         | (
@@ -90,21 +75,27 @@ def takeOffDeff():
     ).wait()
 
 
-def moveByFlont10(dx):
+def moveByFlont10(x=0, y=0, z=0):
     # Move 10m
-    drone(
-        extended_move_by(dx, 0, 0, math.pi, 0.1, 0.1, 1, _timeout=100)
+    assert drone(
+        moveBy(x, y, z, math.pi)
+        #>> PCMD(1, 0, 0, 0, 0, 0)
+        # >> FlyingStateChanged(state="hovering", _timeout=5)
+        # extended_move_by(10, 0, 0, math.pi, 1, 1, 1)
+        >> PCMD(1, 0, 0, 0, 0, 0)
+        # >> FlyingStateChanged(state="hovering", _timeout=5)
+        # >> moveByEnd(_policy='wait')
         >> FlyingStateChanged(state="hovering", _timeout=5)
     ).wait().success()
 
 
-def moveToBackHome(drone_location, culc1, culc2):
+def moveToBackHome(drone_location):
     # Go back home
-    drone(
-        extended_move_to(culc1,  culc2,\
+    assert drone(
+        extended_move_to(drone_location["latitude"],  drone_location["longitude"],\
          1, MoveTo_Orientation_mode.TO_TARGET, 0.0, 10, 10, 10)
         >> FlyingStateChanged(state="hovering", _timeout=5)
-        >> moveToChanged(latitude=culc1, longitude=culc2,\
+        >> moveToChanged(latitude=drone_location["latitude"], longitude=drone_location["longitude"],\
          altitude=1, orientation_mode=MoveTo_Orientation_mode.TO_TARGET,\
          status='DONE', _policy='wait')
         >> FlyingStateChanged(state="hovering", _timeout=5)
@@ -113,9 +104,17 @@ def moveToBackHome(drone_location, culc1, culc2):
 
 def landingDeff():
     # Landing
-    drone(
-        Landing()
-        >> FlyingStateChanged(state="landed", _timeout=5)
+    assert drone(
+        FlyingStateChanged(state="landing", _policy="check")
+        | FlyingStateChanged(state="flying", _policy="check")
+        | (
+            GPSFixStateChanged(fixed=1, _timeout=10, _policy="check_wait")
+            >> (
+                Landing(_no_expect=True)
+                & FlyingStateChanged(
+                    state="landed", _timeout=5, _policy="check_wait")
+            )
+        )        
     ).wait()
 
 
